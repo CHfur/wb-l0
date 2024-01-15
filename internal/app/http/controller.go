@@ -1,7 +1,8 @@
-package http
+package httpapp
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 	"net/http"
@@ -27,7 +28,11 @@ func (c *Controller) FindOrder(w http.ResponseWriter, r *http.Request) {
 	response, _ := json.Marshal(order)
 	status := http.StatusOK
 	if err != nil {
-		status = http.StatusInternalServerError
+		if errors.Is(err, services.ErrOrderNotFound) {
+			status = http.StatusNotFound
+		} else {
+			status = http.StatusInternalServerError
+		}
 		response, _ = json.Marshal(map[string]string{"error": err.Error()})
 	}
 

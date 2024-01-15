@@ -29,11 +29,6 @@ func New(conf *config.DBConfig) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-// TODO: exec
-func (s *Storage) Close() {
-	s.db.Close()
-}
-
 func (s *Storage) Orders(ctx context.Context) (map[string]*models.Order, error) {
 	const op = "storage.pgsql.Orders"
 

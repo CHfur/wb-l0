@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"go.uber.org/zap"
+	"order-service/internal/cache"
 	"order-service/internal/domain/models"
 )
 
@@ -17,51 +18,55 @@ type OrderProvider interface {
 	Orders(ctx context.Context) (map[string]*models.Order, error)
 }
 
-type Service struct {
-	logger        *zap.Logger
-	orderSaver    OrderSaver
-	orderProvider OrderProvider
-	//TODO: extract cache
-	ordersCache map[string]*models.Order
+type OrderCache interface {
+	Find(key string) (*models.Order, error)
+	Put(key string, order *models.Order)
 }
 
-func NewService(logger *zap.Logger, paymentSaver OrderSaver, paymentProvider OrderProvider) *Service {
-	return &Service{logger: logger, orderSaver: paymentSaver, orderProvider: paymentProvider, ordersCache: make(map[string]*models.Order)}
+type Service struct {
+	logger   *zap.Logger
+	saver    OrderSaver
+	provider OrderProvider
+	cache    OrderCache
+}
+
+func NewService(logger *zap.Logger, saver OrderSaver, provider OrderProvider, cache OrderCache) *Service {
+	return &Service{logger: logger, saver: saver, provider: provider, cache: cache}
 }
 
 func (s *Service) SaveOrder(data models.Order) error {
-	err := s.orderSaver.SaveOrder(context.Background(), data)
+	err := s.saver.SaveOrder(context.Background(), data)
 	if err != nil {
 		return err
 	}
 
-	s.ordersCache[data.OrderUid] = &data
+	s.cache.Put(data.OrderUid, &data)
 
 	return nil
 }
 
 func (s *Service) FindOrder(id string) (*models.Order, error) {
-	order, ok := s.ordersCache[id]
-	if !ok {
+	order, err := s.cache.Find(id)
+	if err != nil {
 		return nil, ErrOrderNotFound
 	}
 
 	return order, nil
 }
 
-func (s *Service) LoadOrdersFromDbToCache() {
+func LoadOrdersFromDbToCache(logger *zap.Logger, provider OrderProvider) OrderCache {
 	op := "services.LoadOrdersFromDbToCache"
 
-	log := s.logger.With(
+	log := logger.With(
 		zap.String("op", op),
 	)
 
-	orders, err := s.orderProvider.Orders(context.Background())
+	orders, err := provider.Orders(context.Background())
 	if err != nil {
 		panic(err)
 	}
 
-	s.ordersCache = orders
-
 	log.Info("Orders successfully loaded from db to cache")
+
+	return cache.NewInMemoryOrderCache(orders)
 }

@@ -8,6 +8,7 @@ type Config struct {
 	App    *AppConfig
 	Server *ServerConfig
 	DB     *DBConfig
+	Nats   *NatsConfig
 }
 
 func New() *Config {
@@ -15,6 +16,7 @@ func New() *Config {
 		App:    NewAppConfig(),
 		Server: NewServerConfig(),
 		DB:     NewDBConfig(),
+		Nats:   NewNatsConfig(),
 	}
 }
 
