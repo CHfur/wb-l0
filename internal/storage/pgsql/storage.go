@@ -58,7 +58,7 @@ func (s *Storage) Orders(ctx context.Context) (map[string]*models.Order, error) 
 	return orders, nil
 }
 
-func (s *Storage) SaveOrder(ctx context.Context, orderData models.Order) (err error) {
+func (s *Storage) SaveOrder(ctx context.Context, orderData *models.Order) (err error) {
 	const op = "storage.pgsql.SaveOrder"
 
 	stmt, err := s.db.Prepare("INSERT INTO orders (uid, data) VALUES($1, $2)")

@@ -8,9 +8,10 @@ import (
 	"go.uber.org/zap/zapcore"
 	"math/rand"
 	"order-service/config"
+	"sync"
 )
 
-const ProduceOrdersCount = 50000
+const ProduceOrdersCount = 5000
 
 func main() {
 	conf := config.New()
@@ -21,7 +22,7 @@ func main() {
 	}
 
 	clusterID := conf.Nats.ClusterId
-	clientID := RandStringRunes(20)
+	clientID := "test-client-2"
 
 	sc, err := stan.Connect(clusterID, clientID, stan.NatsURL(conf.Nats.Url))
 	if err != nil {
@@ -29,7 +30,10 @@ func main() {
 	}
 	defer sc.Close()
 
+	var wg sync.WaitGroup
+
 	ackHandler := func(ackedNuid string, err error) {
+		defer wg.Done()
 		if err != nil {
 			logger.Info(fmt.Sprintf("Warning: error publishing msg id %s: %v\n", ackedNuid, err.Error()))
 		} else {
@@ -39,12 +43,15 @@ func main() {
 
 	for i := 0; i < ProduceOrdersCount; i++ {
 		uid := RandStringRunes(20)
+		wg.Add(1)
 
 		_, err = sc.PublishAsync(conf.Nats.Channel, getMessage(uid), ackHandler)
 		if err != nil {
 			panic(err)
 		}
 	}
+
+	wg.Wait()
 
 	logger.Info("Order successfully produced")
 }

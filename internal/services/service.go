@@ -10,7 +10,7 @@ import (
 type OrderSaver interface {
 	SaveOrder(
 		ctx context.Context,
-		orderData models.Order,
+		orderData *models.Order,
 	) (err error)
 }
 
@@ -34,13 +34,13 @@ func NewService(logger *zap.Logger, saver OrderSaver, provider OrderProvider, ca
 	return &Service{logger: logger, saver: saver, provider: provider, cache: cache}
 }
 
-func (s *Service) SaveOrder(data models.Order) error {
+func (s *Service) SaveOrder(data *models.Order) error {
 	err := s.saver.SaveOrder(context.Background(), data)
 	if err != nil {
 		return err
 	}
 
-	s.cache.Put(data.OrderUid, &data)
+	s.cache.Put(data.OrderUid, data)
 
 	return nil
 }

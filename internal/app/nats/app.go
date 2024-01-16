@@ -1,6 +1,7 @@
 package natsapp
 
 import (
+	"context"
 	"fmt"
 	"github.com/nats-io/stan.go"
 	"github.com/nats-io/stan.go/pb"
@@ -12,6 +13,7 @@ type App struct {
 	logger *zap.Logger
 	conn   stan.Conn
 	sub    stan.Subscription
+	cancel context.CancelFunc
 }
 
 func NewApp(logger *zap.Logger, service *services.Service, clusterId, clientId, url, channel string) *App {
@@ -40,7 +42,11 @@ func NewApp(logger *zap.Logger, service *services.Service, clusterId, clientId, 
 
 	log.Info(fmt.Sprintf("Nats-streaming listening on [%s], clientID=[%s]", channel, clientId))
 
-	return &App{logger: logger, conn: sc, sub: sub}
+	ctx, cancel := context.WithCancel(context.Background())
+	handler.StartHandle(ctx)
+	log.Info("Nats handler started")
+
+	return &App{logger: logger, conn: sc, sub: sub, cancel: cancel}
 }
 
 func (a *App) Stop() error {
@@ -48,6 +54,7 @@ func (a *App) Stop() error {
 
 	a.logger.With(zap.String("op", op)).Info("stopping NATS stream handle")
 
+	a.cancel()
 	errSub := a.sub.Close()
 	errConn := a.conn.Close()
 
