@@ -9,7 +9,3 @@ WB L0
 ```
 make up
 ```
-
-**Documentation**
-
-`documentation.json`
